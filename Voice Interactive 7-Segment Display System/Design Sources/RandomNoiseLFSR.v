@@ -22,6 +22,10 @@ module RandomNoiseLFSR #(parameter N = 4)   // Default width = 4
             // For an 8-bit LFSR
             assign xor_first_bit = (lfsr ^ (lfsr >> 8) ^ (lfsr >> 6) ^ (lfsr >> 5) ^ (lfsr >> 4)) & 1;  // Taps: 8th, 6th, 5th, 4th bits
         end
+        else if (N == 32) begin
+            // For an 8-bit LFSR
+            assign xor_first_bit = (lfsr ^ (lfsr >> 32) ^ (lfsr >> 30) ^ (lfsr >> 26) ^ (lfsr >> 25)) & 1;  // Taps: 32nd, 30th, 26th, 25th bits
+        end
         else begin
             assign xor_first_bit = 1'b0;
         end
@@ -30,10 +34,13 @@ module RandomNoiseLFSR #(parameter N = 4)   // Default width = 4
     always @(posedge clk or posedge reset) begin
         if (reset)
             if (N == 4) begin
-                lfsr <= 'd9;            // Initial value when N = 4
+                lfsr <= (1 << 4) - 1;            // Initial value when N = 4
             end
             else if (N == 8) begin
                 lfsr <= (1 << 8) - 1;   // Initial value when N = 8
+            end
+            else if (N == 32) begin
+                lfsr <= (1 << 32) - 1;
             end
             else begin
                 lfsr <= {N{1'b0}};      // Default reset value for other N
@@ -41,10 +48,13 @@ module RandomNoiseLFSR #(parameter N = 4)   // Default width = 4
         else begin
             // Shift operation based on N
             if (N == 4) begin
-                lfsr <= {(lfsr >> 1) | (xor_first_bit << 3)};  // Shift left and insert feedback
+                lfsr <= {(lfsr >> 1) | (xor_first_bit << 3)};   // Shift left and insert xor_first_bit
             end
             else if (N == 8) begin
-                lfsr <= {(lfsr >> 1) | (xor_first_bit << 7)};
+                lfsr <= {(lfsr >> 1) | (xor_first_bit << 7)};   // Shift left and insert xor_first_bit
+            end
+            else if (N == 32) begin
+                lfsr <= {(lfsr >> 1) | (xor_first_bit << 31)};   // Shift left and insert xor_first_bit
             end
         end
     end
