@@ -1,2 +1,2 @@
 # Voice-Interactive-7-Segment-Display-System
-![Screenshot 2024-10-13 015036](https://github.com/user-attachments/assets/b2824dc3-1039-4a85-95cd-694e7f0a15ea)
+![Screenshot 2024-10-21 004603](https://github.com/user-attachments/assets/1a7c8198-16a6-4f9c-8924-9d35de9fabea)
