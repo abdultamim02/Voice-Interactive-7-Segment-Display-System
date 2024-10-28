@@ -6,53 +6,114 @@
 
 module DataMemoryAddress #(parameter N = 32)            // 32 bit address
                           (input clk,
-                           input nRESET,                            // Active Low reset
-                           input [N-1:0] address,                   // 32 bit input addrerss
-                           output reg [N/2-1:0] SRAM_0,             // 16 bit output first SRAM
-                           output reg [N/2-1:0] SRAM_1,             // 16 bit output second SRAM
-                           output reg [N/2-1:0] UART1,              // 16 bit output Output Port
-                           output reg [N/2-1:0] Control_Module,     // 16 bit output Input Port
-                           output reg [2:0] active_select           // 2 bit output active select (indicating which memory I/O was chosen)
+                           input nRESET,                    // Active Low reset
+                           input [N-1:0] address,           // 32 bit input addrerss
+                           input read,                      // 1 bit input read signal
+                           input write,                     // 1 bit input write signal
+                           output reg Control_Module,       // 1 bit output Input Port
+                           output reg UART1,                // 1 bit output Output Port
+                           output reg CE0,                  // 1 bit output first SRAM Chip Enable
+                           output reg CE1,                  // 1 bit output second SRAM Chip Enable
+                           output reg OE0,                  // 1 bit output first SRAM Output Enable
+                           output reg OE1,                  // 1 bit output second SRAM Output Enable
+                           output reg WE0,                  // 1 bit output first SRAM Write Enable
+                           output reg WE1                   // 1 bit output second SRAM Write Enable
                            );
                            
-    /*
-    NOTE:
-    The address bits 31-24 ([31:24] address) can
-    also be used in if states and will result in the
-    same outputs
-    */
+    wire [19:0] upper_bits;
+    
+    assign upper_bits = address[31:12];
     
     always @(posedge clk or negedge nRESET) begin
         if (!nRESET) begin
-            SRAM_0 <= 0;
-            SRAM_1 <= 0;
-            UART1 <= 0;
-            Control_Module <= 0;
+            Control_Module <= 1;
+            UART1 <= 1;
+            CE0 <= 1;
+            CE1 <= 1;
+            OE0 <= 1;
+            OE1 <= 1;
+            WE0 <= 1;
+            WE1 <= 1;
         end
         else begin
-            if (address >= 32'h1000_0000 && address <= 32'h13FF_FFFF) begin
-                SRAM_0 <= 16'b1111_1111_1111_1110;
-                active_select <= 2'b00;
-            end
-            else if (address >= 32'h1400_0000 && address <= 32'h17FF_FFFF) begin
-                SRAM_1 <= 16'b1111_1111_1111_1101;
-                active_select <= 2'b01;
-            end
-            else if (address >= 32'h4802_2000 && address <= 32'h4802_2FFF) begin
-                UART1 <= 16'b1111_1111_1111_1011;
-                active_select <= 2'b10;
-            end
-            else if (address >= 32'h44E1_0000 && address <= 32'h44E1_1FFF) begin
-                Control_Module <= 16'b1111_1111_1111_0111;
-                active_select <= 2'b11;
-            end
-            else begin
-                SRAM_0 <= 0;
-                SRAM_1 <= 0;
-                UART1 <= 0;
-                Control_Module <= 0;
-                active_select <= 1'bx;
-            end
+            case (upper_bits)
+                20'b0001_0000_0000_0000_0000: begin
+                    CE0 <= 0;
+                    CE1 <= 1;
+                    
+                    if (read) begin
+                        OE0 <= 0;
+                        WE0 <= 1;
+                    end
+                    else if (write) begin
+                        WE0 <= 0;
+                        OE0 <= 1;
+                    end
+                    else begin
+                        OE0 <= 1;
+                        WE0 <= 1;
+                    end
+                end
+                
+                20'b0001_0100_0000_0000_0000: begin
+                    CE1 <= 0;
+                    CE0 <= 1;
+                    
+                    if (read) begin
+                        OE1 <= 0;
+                        WE1 <= 1;
+                    end
+                    else if (write) begin
+                        WE1 <= 0;
+                        OE1 <= 1;
+                    end
+                    else begin
+                        OE1 <= 1;
+                        WE1 <= 1;
+                    end
+                end
+                
+                20'b0010_0000_0000_0000_0000: begin
+                    Control_Module <= 1;
+                    UART1 <= 1;
+                    CE0 <= 1;
+                    CE1 <= 1;
+                    OE0 <= 1;
+                    OE1 <= 1;
+                    WE0 <= 1;
+                    WE1 <= 1;
+                end
+                
+                20'b0100_0100_1110_0001_0000: begin
+                    Control_Module <= 0;
+                end
+                
+                20'b0100_0100_1110_0001_0010: begin
+                    Control_Module <= 1;
+                    UART1 <= 1;
+                    CE0 <= 1;
+                    CE1 <= 1;
+                    OE0 <= 1;
+                    OE1 <= 1;
+                    WE0 <= 1;
+                    WE1 <= 1;
+                end
+                
+                20'b0100_1000_0000_0010_0010: begin
+                    UART1 <= 0;
+                end
+                
+                20'b0100_1000_0000_0010_0011: begin
+                    Control_Module <= 1;
+                    UART1 <= 1;
+                    CE0 <= 1;
+                    CE1 <= 1;
+                    OE0 <= 1;
+                    OE1 <= 1;
+                    WE0 <= 1;
+                    WE1 <= 1;
+                end
+            endcase
         end
     end
     
