@@ -8,37 +8,43 @@ module ProgramAddressMap #(parameter N = 32)                    // 32 bit addres
                           (input clk,
                            input nRESET,                        // Active Low reset
                            input [N-1:0] address,               // 32 bit input addrerss
-                           output reg [N/2-1:0] Flash_0,        // 16 bit output first Flash
-                           output reg [N/2-1:0] Flash_1,        // 16 bit output second Flash
-                           output reg [1:0] chip_select         // 1 bit output chip select (indicating which memory IC was chosen)
+                           output reg CS0,                      // 1 bit output first Flash Chip Select
+                           output reg CS1,                      // 1 bit output second Flash Chip Select
+                           output reg WP                        // 1 bit output Write Protect
                            );
                            
-    /*
-    NOTE:
-    The address bits 31-24 ([31:24] address) can
-    also be used in if states and will result in the
-    same outputs
-    */
+    wire [19:0] upper_bits;
+    
+    assign upper_bits = address[31:12];
     
     always @(posedge clk or negedge nRESET) begin
         if (!nRESET) begin
-            Flash_0 <= 0;
-            Flash_1 <= 0;
+            // Inactive when outside Flash address range
+            CS0 <= 1;
+            CS1 <= 1;
+            WP <= 1;
         end
         else begin
-            if (address >= 32'h0000_0000 && address <= 32'h07FF_FFFF) begin
-                Flash_0 <= 16'b1111_1111_1111_1110;
-                chip_select <= 2'b00;
-            end
-            else if (address >= 32'h0800_0000 && address <= 32'h0FFF_FFFF) begin
-                Flash_1 <= 16'b1111_1111_1111_1101;
-                chip_select <= 2'b01;
-            end
-            else begin
-                Flash_0 <= 0;
-                Flash_1 <= 0;
-                chip_select <= 1'bx;
-            end
+            case (upper_bits)
+                20'b0000_0000_0000_0000_0000: begin
+                    CS0 <= 0;             // Active low first Flash chip select
+                    CS1 <= 1;
+                    WP <= 0;              // Active low Write Protect
+                end
+                
+                20'b0000_1000_0000_0000_0000: begin
+                    CS0 <= 1;
+                    CS1 <= 0;             // Active low second Flash chip select
+                    WP <= 0;              // Active low Write Protect
+                end
+                
+                20'b0010_0000_0000_0000_0000: begin
+                    // Inactive when outside Flash address range
+                    CS0 <= 1;
+                    CS1 <= 1;
+                    WP <= 1;
+                end
+            endcase
         end
     end
     
