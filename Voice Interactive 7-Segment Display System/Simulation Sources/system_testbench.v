@@ -14,9 +14,9 @@ module system_testbench;
     reg reset;
     reg nRESET;                         // Active Low reset
     reg [N*8-1:0] address;              // 32 bit input addrerss for ---> ProgramAddressMap and DataMemoryAddress modules <--- 
-    reg [5:0] ID;                       // 6 bit input ID for a specifc number for ---> DigitTo7SegmentDisplay.v module <---
     reg read;                           // 1 bit input read signal for ---> DataMemoryAddress module <---
     reg write;                          // 1 bit input write signal for ---> DataMemoryAddress module <---
+    reg rx;                             // Serial data input bit (1-bit) for ---> UART_Receiver module <---
     wire signed [7:0] out;              // Sine wave output from the ---> read_memory.v module <---
     wire [N-1:0] lfsr_4bit;             // 4 bit output from ---> RandomNoiseLFSR.v module <---
     wire [N*2-1:0] lfsr_8bit;           // 8 bit output from ---> RandomNoiseLFSR.v module <---
@@ -32,8 +32,10 @@ module system_testbench;
     wire CS0;                           // 1 bit output first Flash CS0 for ---> ProgramAddressMap module <---
     wire CS1;                           // 1 bit output second Flash CS1 for ---> ProgramAddressMap module <---
     wire WP;                            // 1 bit output Write Protect for ---> ProgramAddressMap module <---
+    wire [7:0] data;                    // 8-bit data to transmit for ---> UART_Receiver module <---
+    wire rx_busy;                       // Signal to indicate whether transmission is -> busy <- or not (tx_busy = 1: transmitter is busy and currently involved in transmitting data | tx_done = 0: transmitter is not busy or has completed its transmission) for ---> UART_Receiver module <---
     wire [13:0] Seven_Segment_Display;  // 14 bit output testing for seven segment display for ---> DigitTo7SegmentDisplay.v module <---
-    
+
     parameter ClockPeriod = 10;     // ClockPeriod is 10 ns
     
     // Clock generation
@@ -46,9 +48,9 @@ module system_testbench;
           .reset(reset),
           .nRESET(nRESET),
           .address(address),
-          .ID(ID),
           .read(read),
           .write(write),
+          .rx(rx),
           .out(out),
           .lfsr_4bit(lfsr_4bit),
           .lfsr_8bit(lfsr_8bit),
@@ -64,8 +66,32 @@ module system_testbench;
           .CS0(CS0),
           .CS1(CS1),
           .WP(WP),
+          .data(data),
+          .rx_busy(rx_busy),
           .Seven_Segment_Display(Seven_Segment_Display)
           );
+
+    integer i;
+
+    // Task to send an ID (in reverse) with start and stop bits
+    task send_ID(input [7:0] ID);
+        begin
+            rx <= 0;                                // Start bit (LOW)
+            @(posedge clk);                    // First Check (IDLE state)
+            @(posedge clk);                    // Second Check (START state)
+        
+            // Send each bit of the ID in reverse order
+            for (i = 7; i >= 0; i = i - 1) begin
+                rx <= ID[i];
+                @(posedge clk);
+            end
+            
+            rx <= 1;  @(posedge clk);          // Stop bit (HIGH)
+        
+            rx <= 1; @(posedge clk);           // Default IDLE state (HIGH)
+        end
+    endtask
+
 
     initial begin
         // Initialize reset
@@ -80,18 +106,33 @@ module system_testbench;
         reset = 0;      // Deactivte reset
         nRESET = 1;     // Activte nREST
         
+        // Sending multiple ID numbers using the task to UART_Receiver module
+        rx <= 1; @(posedge clk);           // Default IDLE state (HIGH)
+        
+        send_ID(8'd0);          // Start with ID = 0 (IDEL state)
+        send_ID(8'd5);          // Change ID to 5 (move to START state)
+        send_ID(8'd13);         // Record number
+        send_ID(8'd35);         // Record number
+        send_ID(8'd44);         // Record number
+        send_ID(8'd46);         // 46 Indicates no more numbers (move to DONE state)
+        send_ID(8'd47);         // 47 indicates there is another number to display (go back to START state)
+        send_ID(8'd30);         // Record number
+        send_ID(8'd38);         // Record number
+        send_ID(8'd46);         // 46 Indicates no more numbers (move to DONE state)
+        send_ID(8'd0);          // 0 Indicates no more numbers (back to IDEL state)
+        
         // ProgramAddressMap module Testing
-        #50;
+        #100;
         address = 32'h0000_0BCD;      // An address between 0x0000_0000 to 0x07FF_FFFF (Flash 0)
         
-        #50;
+        #100;
         address = 32'h0800_0CBA;      // An address between 0x0800_0000 to 0x0FFF_FFFF (Flash 1)
         
-        #50;
+        #100;
         address = 32'h2000_0DEF;      // An address between 0x2000_0000 - 0x4AFF_FFFF (Not Used)
         
         // DataMemoryAddress module Testing
-        #50;
+        #90;
         address = 32'h1000_08AD;      // An address between 0x1000_0000 to 0x13FF_FFFF (SRAM 0)
         
         #10;
@@ -104,7 +145,7 @@ module system_testbench;
         #10;
         write = 0;
         
-        #50;
+        #90;
         address = 32'h1400_0F32;      // An address between 0x1400_0000 to 0x17FF_FFFF (SRAM 1)
         
         #10;
@@ -117,54 +158,20 @@ module system_testbench;
         #10;
         write = 0;
         
-        #50;
+        #100;
         address = 32'h2000_0FFA;      // An address between 0x2000_0000 to 0x44E0_FFFF (Not Used)
         
-        #50;
+        #100;
         address = 32'h44E1_0ABC;      // An address between 0x44E1_0000 to 0x44E1_1FFF (Control Module)
         
-        #50;
+        #100;
         address = 32'h44E1_28AD;      // An address between 0x44E1_2000 to 0x4802_1FFF (Not Used)
         
-        #50;
+        #100;
         address = 32'h4802_2C58;      // An address between 0x4802_2000 to 0x4802_2FFF (UART1)
         
-        #50;
+        #100;
         address = 32'h4802_3BBB;      // An address between 0x4802_3000 to 0x4AFF_FFFF (Not Used)
-        
-        // DigitTo7SegmentDisplay.v module testing
-        #20;
-        ID = 0;                      // Start with ID = 0 (IDEL state)
-        
-        #20;
-        ID = 5;                      // Change ID to 5 (move to START state)
-        
-        #20;
-        ID = 13;                     // Record number
-        
-        #20;
-        ID = 35;                     // Record number
-        
-        #20;
-        ID = 44;                     // Record number
-        
-        #20;
-        ID = 46;                     // 46 Indicates no more numbers (move to DONE state)
-        
-        #20;
-        ID = 47;                     // 47 indicates there is another number to display (go back to START state)
-        
-        #20;
-        ID = 30;                     // Record number
-        
-        #20;
-        ID = 38;                     // Record number
-        
-        #20;
-        ID = 46;                     // 46 Indicates no more numbers (move to DONE state)
-        
-        #20;
-        ID = 0;                      // 0 Indicates no more numbers (back to IDEL state)
                 
         // Generate noise for a certain number of clock cycles
         // repeat (50) begin
@@ -172,7 +179,7 @@ module system_testbench;
         // end
         
         // Simulate for 200ns
-        #100;
+        #200;
         $finish;
     end
     
