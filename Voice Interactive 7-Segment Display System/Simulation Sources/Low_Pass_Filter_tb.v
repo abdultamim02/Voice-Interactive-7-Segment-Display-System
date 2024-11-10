@@ -23,8 +23,8 @@ module Low_Pass_Filter_tb;
     initial clk = 0;            // Initialize clock signal to active low (0) at the start of simulation
     always #(ClockPeriod / 2) clk = ~clk;       // Continuously toggle the clock every (10 / 2 = 5 ns) to create a waveform
 
-    // Instantiate the low_pass_filter
-    low_pass_filter uut (
+    // Instantiate the Low_Pass_Filter module
+    Low_Pass_Filter filter (
         .clk(clk),
         .reset(reset),
         .noisy_data(noisy_data),
