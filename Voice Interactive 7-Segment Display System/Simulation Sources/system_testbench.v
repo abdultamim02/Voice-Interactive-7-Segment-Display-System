@@ -13,14 +13,13 @@ module system_testbench;
     reg clk;
     reg reset;
     reg nRESET;                         // Active Low reset
-    reg [N*8-1:0] address;              // 32 bit input addrerss for ---> ProgramAddressMap and DataMemoryAddress modules <--- 
-    reg read;                           // 1 bit input read signal for ---> DataMemoryAddress module <---
-    reg write;                          // 1 bit input write signal for ---> DataMemoryAddress module <---
-    reg rx;                             // Serial data input bit (1-bit) for ---> UART_Receiver module <---
     wire signed [7:0] out;              // Sine wave output from the ---> read_memory.v module <---
     wire [N-1:0] lfsr_4bit;             // 4 bit output from ---> RandomNoiseLFSR.v module <---
     wire [N*2-1:0] lfsr_8bit;           // 8 bit output from ---> RandomNoiseLFSR.v module <---
     wire [N*8-1:0] lfsr_32bit;          // 32 bit output from ---> RandomNoiseLFSR.v module <---
+    reg [N*8-1:0] address;              // 32 bit input addrerss for ---> ProgramAddressMap and DataMemoryAddress modules <--- 
+    reg read;                           // 1 bit input read signal for ---> DataMemoryAddress module <---
+    reg write;                          // 1 bit input write signal for ---> DataMemoryAddress module <---
     wire Control_Module;                // 1 bit output Input Port for ---> DataMemoryAddress module <---
     wire UART1;                         // 1 bit output Output Port for ---> DataMemoryAddress module <---
     wire CE0;                           // 1 bit output first SRAM Chip Enable for ---> DataMemoryAddress module <---
@@ -32,9 +31,14 @@ module system_testbench;
     wire CS0;                           // 1 bit output first Flash CS0 for ---> ProgramAddressMap module <---
     wire CS1;                           // 1 bit output second Flash CS1 for ---> ProgramAddressMap module <---
     wire WP;                            // 1 bit output Write Protect for ---> ProgramAddressMap module <---
-    wire [7:0] data;                    // 8-bit data to transmit for ---> UART_Receiver module <---
+    reg rx;                             // Serial data input bit (1-bit) for ---> UART_Receiver module <---
     wire rx_busy;                       // Signal to indicate whether transmission is -> busy <- or not (tx_busy = 1: transmitter is busy and currently involved in transmitting data | tx_done = 0: transmitter is not busy or has completed its transmission) for ---> UART_Receiver module <---
+    wire [7:0] data;                    // 8-bit data to transmit for ---> UART_Receiver module <---
     wire [13:0] Seven_Segment_Display;  // 14 bit output testing for seven segment display for ---> DigitTo7SegmentDisplay.v module <---
+    reg [31:0] noisy_data;              // 32-bit noisy input data for  ---> Low_Pass_Filter module <---
+    wire [31:0] filtered_data;          // 32-bit filtered output data for ---> Low_Pass_Filter module <---
+
+    reg [31:0] memory [0:125];      // Memory array to store 125 data points (32-bit)
 
     parameter ClockPeriod = 10;     // ClockPeriod is 10 ns
     
@@ -47,14 +51,13 @@ module system_testbench;
          (.clk(clk),
           .reset(reset),
           .nRESET(nRESET),
-          .address(address),
-          .read(read),
-          .write(write),
-          .rx(rx),
           .out(out),
           .lfsr_4bit(lfsr_4bit),
           .lfsr_8bit(lfsr_8bit),
           .lfsr_32bit(lfsr_32bit),
+          .address(address),
+          .read(read),
+          .write(write),
           .Control_Module(Control_Module),
           .UART1(UART1),
           .CE0(CE0),
@@ -66,12 +69,16 @@ module system_testbench;
           .CS0(CS0),
           .CS1(CS1),
           .WP(WP),
-          .data(data),
+          .rx(rx),
           .rx_busy(rx_busy),
-          .Seven_Segment_Display(Seven_Segment_Display)
+          .data(data),
+          .Seven_Segment_Display(Seven_Segment_Display),
+          .noisy_data(noisy_data),
+          .filtered_data(filtered_data)
           );
 
     integer i;
+    integer mem_index;              // Index to read data from the memory array
 
     // Task to send an ID (in reverse) with start and stop bits
     task send_ID(input [7:0] ID);
@@ -100,6 +107,9 @@ module system_testbench;
         
         read = 0;
         write = 0;
+        
+        noisy_data = 32'd0;
+        mem_index = 0;      // Start at the beginning of the memory array
 
         // Wait for a few cycles and then release reset
         #5;
@@ -172,11 +182,15 @@ module system_testbench;
         
         #100;
         address = 32'h4802_3BBB;      // An address between 0x4802_3000 to 0x4AFF_FFFF (Not Used)
-                
-        // Generate noise for a certain number of clock cycles
-        // repeat (50) begin
-        //    #10; // Wait for 10ns (one clock period)
-        // end
+        
+        // Read the noisy data from the .mem file into the memory array
+        $readmemh("NoisyWave.mem", memory);  // Read the data from the .mem file
+        
+        // Apply the noisy data to the filter
+        for (i = 0; i < 125; i = i + 1) begin
+            #20 noisy_data = memory[mem_index];     // Feed the noisy data into the filter
+            mem_index = mem_index + 1;      // Move to the next data point
+        end
         
         // Simulate for 200ns
         #200;
@@ -184,4 +198,3 @@ module system_testbench;
     end
     
 endmodule
-
