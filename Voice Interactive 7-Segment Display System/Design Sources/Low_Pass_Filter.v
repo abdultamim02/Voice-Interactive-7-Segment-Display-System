@@ -1,36 +1,20 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 11/08/2024 09:53:39 AM
-// Design Name: 
-// Module Name: low_pass_filter
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
+// Company: San Diego State University
+// Engineer: Abdul Karim Tamim
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module low_pass_filter(    input clk,                    // Clock signal
-    input rst,                    // Reset signal
-    input [31:0] noisy_data,      // 32-bit noisy input data
-    output reg [31:0] filtered_data  // 32-bit filtered output data
-);
+module Low_Pass_Filter(input clk,                           
+                       input reset,                           
+                       input [31:0] noisy_data,             // 32-bit noisy input data
+                       output reg [31:0] filtered_data      // 32-bit filtered output data
+                       );
 
-    // Parameters
-    parameter N = 16;  // Moving average window size (16 samples)
+    parameter N = 16;       // Moving average window size (16 samples)
     
     // Register to store the last N samples (32-bit data)
-    reg [31:0] data_window [0:N-1];  // Array to hold samples
+    reg [31:0] data_window [0:N-1];         // Array to hold samples
     
     // Sum of the last N samples for averaging (48-bit to avoid overflow)
     reg [47:0] sum;  // 48-bit sum to handle the large 32-bit values
@@ -40,8 +24,8 @@ module low_pass_filter(    input clk,                    // Clock signal
 
     integer i;
 
-    always @(posedge clk or posedge rst) begin
-        if (rst) begin
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
             // Reset the sum, counter, and the data window
             sum <= 0;
             count <= 0;
