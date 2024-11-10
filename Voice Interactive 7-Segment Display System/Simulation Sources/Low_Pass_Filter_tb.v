@@ -1,19 +1,21 @@
-`timescale 1ns / 1ns
+`timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: San Diego State University
 // Engineer: Abdul Karim Tamim
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module low_pass_filter_tb;
+module Low_Pass_Filter_tb;
 
     reg clk;
-    reg rst;
-    reg [31:0] noisy_data;        // 32-bit noisy data input to the filter
-    wire [31:0] filtered_data;    // 32-bit filtered output data
-    reg [31:0] memory [0:171];   // Memory array to store 1080 data points (32-bit)
+    reg reset;
+    reg [31:0] noisy_data;          // 32-bit noisy data input to the filter
+    wire [31:0] filtered_data;      // 32-bit filtered output data
+
+    reg [31:0] memory [0:125];      // Memory array to store 125 data points (32-bit)
+
     integer i;
-    integer mem_index;           // Index to read data from the memory array
+    integer mem_index;              // Index to read data from the memory array
     
     parameter ClockPeriod = 10;     // ClockPeriod is 10 ns
     
@@ -24,7 +26,7 @@ module low_pass_filter_tb;
     // Instantiate the low_pass_filter
     low_pass_filter uut (
         .clk(clk),
-        .rst(rst),
+        .reset(reset),
         .noisy_data(noisy_data),
         .filtered_data(filtered_data)
     );
@@ -38,32 +40,26 @@ module low_pass_filter_tb;
     initial begin
         // Initialize signals
         clk = 0;
-        rst = 0;
+        reset = 1;
         noisy_data = 32'd0;
         mem_index = 0;  // Start at the beginning of the memory array
-
+        
+        #5;
         // Apply reset
-        rst = 1;
-        #20;  // Wait for a few clock cycles
-        rst = 0;
+        reset = 0;
 
         // Read the noisy data from the .mem file into the memory array
-        $readmemh("noisy_data.mem", memory);  // Read the data from the .mem file
+        $readmemh("NoisyWave.mem", memory);  // Read the data from the .mem file
 
         // Apply the noisy data to the filter
-        for (i = 0; i < 171; i = i + 1) begin
-            #20 noisy_data = memory[mem_index];  // Feed the noisy data into the filter
-            mem_index = mem_index + 1;  // Move to the next data point
+        for (i = 0; i < 125; i = i + 1) begin
+            #20 noisy_data = memory[mem_index];     // Feed the noisy data into the filter
+            mem_index = mem_index + 1;      // Move to the next data point
         end
 
         // End simulation after all data has been fed into the filter
-        #10000;
+        #2500;
         $finish;
-    end
-
-    // Monitor output data
-    initial begin
-        $monitor("At time %t, noisy_data = %h, filtered_data = %h", $time, noisy_data, filtered_data);
     end
 
 endmodule
