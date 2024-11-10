@@ -1,3 +1,4 @@
 # Voice-Interactive-7-Segment-Display-System
 ## System Testbench Simulation Output
-![Screenshot 2024-11-03 230912](https://github.com/user-attachments/assets/134d4e3c-ee8d-44a6-9180-34d1e2501dbb)
+
+![Screenshot 2024-11-09 170249](https://github.com/user-attachments/assets/4a68dc8f-8a37-44fc-91ad-ae5f95b1a952)
