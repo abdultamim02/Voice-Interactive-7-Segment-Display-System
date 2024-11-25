@@ -6,6 +6,7 @@
 
 module Top #(parameter N = 4)   // Default width = 4
             (input clk,
+             input cpu_clk,
              //input reset,                                   // Avtive High reset
              input nRESET,                                  // Active Low reset
              //output wire signed [7:0] out,                  // Declare output as signed for ---> read_memory.v module <---
