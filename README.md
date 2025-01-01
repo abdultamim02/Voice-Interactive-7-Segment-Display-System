@@ -1,4 +1,5 @@
 # Voice-Interactive-7-Segment-Display-System
+**"Note"**: This Project Is Fully <ins>**Hypothetical**</ins> (No Hardware Implementation Was Performed).
 
 ## Project Description
 
